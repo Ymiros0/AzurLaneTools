@@ -1,7 +1,6 @@
 from argparse import ArgumentParser
 import math
 from typing import Iterable, Union
-import mwparserfromhell
 import re
 
 from lib import ALJsonAPI, Client, DEFAULT_CLIENTS, Constants, WikiHelper, Utility
@@ -342,7 +341,7 @@ def getGameData(ship_groupid, api: ALJsonAPI, clients: Iterable[Client]):
 		ship_baseid = api.ship_converter.get_groupid(ship_data['NameOverride'][2:-2])
 		if fleet_tech_data := fleet_tech_ship_template.load_client(ship_baseid, Client.EN):
 			fleet_class_data = fleet_tech_ship_class.load_client(fleet_tech_data['class'], Client.EN)
-			ship_data['Class'] = fleet_class_data['name'].split('-Class')[0].strip().split(' Class')[0].strip()
+			ship_data['Class'] = re.sub(r'[ -]class','',fleet_class_data['name'],flags=re.I)
 		if shipstat[0].name[-1:] != "μ":
 			ship_data['ShipGroup'] = 'Child'
 	if shipstat[0].nation._value_ > 100:
@@ -374,7 +373,7 @@ def getGameData(ship_groupid, api: ALJsonAPI, clients: Iterable[Client]):
 			for j in hunt[i]:
 				x[j[0]+3][j[1]+3]=str(i+1)
 		x[3][3]='x'
-		ship_data['Range'] = '{{HuntingRange/Alternative\n    |' + '|\n    |'.join(['|'.join(i) for i in x]) + '|\n  }}'
+		ship_data['Range'] = '{{HuntingRange\n    |' + '|\n    |'.join(['|'.join(i) for i in x]) + '|\n  }}'
 	for attr, val in base_attr_val.items():
 		if attr in [Constants.Attribute.SPEED, Constants.Attribute.LUCK]:
 			#ship_data[attr.wiki_param_name] = val
@@ -515,7 +514,7 @@ def getGameData(ship_groupid, api: ALJsonAPI, clients: Iterable[Client]):
 		ship_data['StatBonus120Type'] =  attributes[attributecode_from_id(fleet_tech_data['add_level_attr'], api, clients)][2]
 		ship_data['StatBonus120'] = fleet_tech_data['add_level_value']
 		fleet_class_data = fleet_tech_ship_class.load_first(fleet_tech_data['class'], DEFAULT_CLIENTS)
-		ship_data['Class'] = fleet_class_data['name'].split('-Class')[0].strip().split(' Class')[0].strip()
+		ship_data['Class'] = re.sub(r'[ -]class','',fleet_class_data['name'],flags=re.I)
 
 	# LIMIT BREAK, DEV LEVELS WITHOUT FORMATTING
 	if not research_data:
@@ -919,6 +918,7 @@ def getGameData(ship_groupid, api: ALJsonAPI, clients: Iterable[Client]):
 
 
 def getWikiData(shipname):
+	import mwparserfromhell
 	wikiclient = WikiHelper.WikiClient().login()
 	wikipage = wikiclient.mwclient.pages[shipname]
 	parsed_template_data = dict()
